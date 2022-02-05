@@ -1,6 +1,6 @@
 # Wordle Solver
 
-This is a simple wordle-solver that works by computing the word which maximizes the expected information gain (i.e. the expected reduction in entropy).
+This is a simple wordle solver that works by computing the word which maximizes the expected information gain (i.e. the expected reduction in entropy).
 It uses an efficient representation of the word information, C++ standard parallelism, and some memoization to compute even the starting word very quickly.
 
 ## Compilation
