@@ -284,7 +284,6 @@ int main(int const argc, char const* const* const argv) {
     std::ranges::sort(word_list);
     std::cout << "Loaded word list with " << word_list.size() << " words!\n";
 
-
     // Hard mode: only allow guesses that conform to previous information
     bool const hard_mode = argc >= 4 && std::atoi(argv[3]) > 0;
     // Adversarial: assume correct word is being changed adversarially
