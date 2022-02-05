@@ -10,6 +10,7 @@
 #include <random>
 #include <ranges>
 #include <unordered_map>
+#include <stdexcept>
 #include <utility>
 #include <vector>
 
@@ -17,7 +18,7 @@ using Word = std::array<char, 5>;
 
 std::ostream& operator<<(std::ostream& os, Word const& w) {
     for (char const c : w) {
-        os << c;
+        os << static_cast<char>(c + 'a');
     }
 
     return os;
@@ -26,6 +27,12 @@ std::ostream& operator<<(std::ostream& os, Word const& w) {
 std::istream& operator>>(std::istream& is, Word& w) {
     for (char& c : w) {
         is >> c;
+
+        if (c < 'a' || c > 'z') {
+            throw std::invalid_argument("Tried to read in word with letter outside of a-z range!");
+        }
+
+        c -= 'a';
     }
 
     return is;
@@ -48,11 +55,11 @@ struct WordInfo {
         std::array<char, 26> truth_counts{0};
 
         for (char const c : guess) {
-            guess_counts[c - 'a']++;
+            ++guess_counts[c];
         }
 
         for (char const c : truth) {
-            truth_counts[c - 'a']++;
+            ++truth_counts[c];
         }
 
         for (std::size_t i = 0; i < 26; ++i) {
@@ -72,20 +79,20 @@ struct WordInfo {
         for (std::size_t i = 0; i < 5; ++i) {
             if (info[i] == 'g') {
                 correct_letters[i] = true;
-                ++min_counts[guess[i] - 'a'];
+                ++min_counts[guess[i]];
                 continue;
             }
 
             correct_letters[i] = false;
 
             if (info[i] == 'y') {
-                ++min_counts[guess[i] - 'a'];
+                ++min_counts[guess[i]];
             }
         }
 
         for (std::size_t i = 0; i < 5; ++i) {
             if (info[i] == 'b') {
-                max_counts[guess[i] - 'a'] = min_counts[guess[i] - 'a'];
+                max_counts[guess[i]] = min_counts[guess[i]];
             }
         }
     }
@@ -98,12 +105,12 @@ struct WordInfo {
                 return false;
             }
 
-            if (++counts[word[i] - 'a'] > max_counts[word[i] - 'a']) {
+            if (++counts[word[i]] > max_counts[word[i]]) {
                 return false;
             }
         }
 
-        return std::ranges::all_of(guess, [&](char const c) { return counts[c - 'a'] >= min_counts[c - 'a']; });
+        return std::ranges::all_of(guess, [&](char const c) { return counts[c] >= min_counts[c]; });
     }
 
     bool operator==(WordInfo const& other) const = default;
@@ -162,7 +169,7 @@ struct std::hash<WordInfo> {
 };
 
 template <typename Fn, typename T>
-concept Reduction = requires(Fn f, T x, T y) {
+concept Reduction = requires(Fn&& f, T x, T y) {
     x = std::invoke(f, x, y);
 };
 
@@ -174,7 +181,7 @@ template <typename Fn>
 requires Reduction<Fn, double> std::pair<Word, double> best_choice(std::vector<Word> const& allowed_choices,
                                                                    std::vector<Word> const& remaining_words,
                                                                    std::unordered_map<Word, double> const& word_freqs,
-                                                                   Fn fn) {
+                                                                   Fn&& fn) {
     Word result = allowed_choices.front();
     std::tuple<double, bool, double> objective{std::numeric_limits<double>::infinity(), true, 0.0};
     std::mutex result_mut;
@@ -243,6 +250,39 @@ std::pair<Word, double> best_choice_adv(std::vector<Word> const& allowed_choices
                        [](double const x, double const y) { return std::max(x, y); });
 }
 
+std::vector<Word> load_word_list(std::string const& filename) {
+    std::vector<Word> result;
+
+    std::ifstream file{filename};
+
+    while (file.good()) {
+        Word w;
+        file >> w;
+        file.ignore();
+
+        result.push_back(w);
+    }
+
+    std::ranges::sort(result);
+
+    return result;
+}
+
+std::unordered_map<Word, double> load_freq_data(std::string const& filename) {
+    std::unordered_map<Word, double> result;
+    std::ifstream freq_data_file{filename};
+
+    while (freq_data_file.good()) {
+        Word w;
+        double f;
+        freq_data_file >> w >> f;
+
+        result[w] = f;
+    }
+
+    return result;
+}
+
 int main(int const argc, char const* const* const argv) {
     if (argc < 3 || argc > 6) {
         std::cout << "Usage: ./wordle_solver guess_list.txt word_list.txt "
@@ -251,37 +291,11 @@ int main(int const argc, char const* const* const argv) {
     }
 
     // Load guess list
-    std::ifstream guess_list_file{argv[1]};
-    std::vector<Word> guess_list;
-
-    for (std::string line; std::getline(guess_list_file, line);) {
-        Word w;
-
-        for (int i = 0; i < std::min(std::size_t{5}, line.length()); ++i) {
-            w[i] = line[i];
-        }
-
-        guess_list.push_back(w);
-    }
-
-    std::ranges::sort(guess_list);
+    std::vector<Word> guess_list = load_word_list(argv[1]);
     std::cout << "Loaded guess list with " << guess_list.size() << " words!\n";
 
     // Load list of possible correct words
-    std::ifstream word_list_file{argv[2]};
-    std::vector<Word> word_list;
-
-    for (std::string line; std::getline(word_list_file, line);) {
-        Word w{0};
-
-        for (int i = 0; i < std::min(std::size_t{5}, line.length()); ++i) {
-            w[i] = line[i];
-        }
-
-        word_list.push_back(w);
-    }
-
-    std::ranges::sort(word_list);
+    std::vector<Word> word_list = load_word_list(argv[2]);
     std::cout << "Loaded word list with " << word_list.size() << " words!\n";
 
     // Hard mode: only allow guesses that conform to previous information
@@ -292,16 +306,7 @@ int main(int const argc, char const* const* const argv) {
     // Load list of word frequency information for tie breaker
     std::unordered_map<Word, double> freq_data;
     if (argc == 6) {
-        std::ifstream freq_data_file{argv[5]};
-
-        while (!freq_data_file.eof()) {
-            Word w;
-            double f;
-            freq_data_file >> w >> f;
-
-            freq_data[w] = f;
-        }
-
+        freq_data = load_freq_data(argv[5]);
         std::cout << "Loaded word frequency data for " << freq_data.size() << " words!\n";
     }
 
