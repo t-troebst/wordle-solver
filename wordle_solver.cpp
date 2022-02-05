@@ -9,8 +9,8 @@
 #include <mutex>
 #include <random>
 #include <ranges>
-#include <unordered_map>
 #include <stdexcept>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -178,10 +178,9 @@ concept Reduction = requires(Fn&& f, T x, T y) {
 // is assumed to be the one which maximizes some function of the entropy (i.e. log_2(size)) of the remaining words,
 // typically either average (random choice) or maximum (adversarial choice).
 template <typename Fn>
-requires Reduction<Fn, double> std::pair<Word, double> best_choice(std::vector<Word> const& allowed_choices,
-                                                                   std::vector<Word> const& remaining_words,
-                                                                   std::unordered_map<Word, double> const& word_freqs,
-                                                                   Fn&& fn) {
+std::pair<Word, double> best_choice(std::vector<Word> const& allowed_choices, std::vector<Word> const& remaining_words,
+                                    std::unordered_map<Word, double> const& word_freqs,
+                                    Fn&& fn) requires Reduction<Fn, double> {
     Word result = allowed_choices.front();
     std::tuple<double, bool, double> objective{std::numeric_limits<double>::infinity(), true, 0.0};
     std::mutex result_mut;
