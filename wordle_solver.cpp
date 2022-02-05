@@ -242,7 +242,7 @@ std::pair<Word, double> best_choice_avg(std::vector<Word> const& allowed_choices
     return {word, entropy / remaining_words.size()};
 }
 
-// Instantiation of best_choice the correct word from "remainig_words" is chosen adversarially.
+// Instantiation of best_choice assuming the correct word from "remainig_words" is chosen adversarially.
 std::pair<Word, double> best_choice_adv(std::vector<Word> const& allowed_choices,
                                         std::vector<Word> const& remaining_words,
                                         std::unordered_map<Word, double> const& word_freqs = {}) {
@@ -252,7 +252,6 @@ std::pair<Word, double> best_choice_adv(std::vector<Word> const& allowed_choices
 
 std::vector<Word> load_word_list(std::string const& filename) {
     std::vector<Word> result;
-
     std::ifstream file{filename};
 
     while (file.good()) {
