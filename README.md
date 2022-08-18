@@ -7,7 +7,7 @@ It uses an efficient representation of the word information, C++ standard parall
 
 The code requires C++20 including support for standard parallelism and ranges, it should compile on a recent version of g++ via:
 
-    ./g++ -Ofast -ltbb -std=c++20 wordle_solver.cpp -o wordle_solver
+    g++ -Ofast -ltbb -std=c++20 wordle_solver.cpp -o wordle_solver
 
 ## Usage
 
